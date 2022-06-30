@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
 	if not args["images"]: args["images"] = "Cluster_img"
 	if not args["output"]: args["output"] = "output.pkl"
-	if not args["save"]: args["save"] = False
+	if not args["save"]: args["save"] = True
 	if not args["procs"]: args["procs"] = (cpu_count() * 2)
 
 
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 		except: print("Processed images directory exists...")
 
 	# Step 2: Load Image and Perform Pre-Processing (Color, Scale, resize, etc)
-	#ext.pre_processing(args["images"], d.working_directory, args["output"], args["procs"], args["save"])
+	ext.pre_processing(args["images"], d.working_directory, args["output"], args["procs"], args["save"])
 
 	# Step 3: Extract Features from Images (PCA, HOG, etc)
 	# currently in pre_processing
