@@ -28,9 +28,8 @@ if __name__ == "__main__":
 
 	if not args["images"]: args["images"] = "Cluster_img"
 	if not args["output"]: args["output"] = "output.pkl"
-	if not args["save"]: args["save"] = True
-	if not args["procs"]: args["procs"] = (cpu_count() * 2)
-
+	if not args["save"]: args["save"] = False
+	if not args["procs"]: args["procs"] = 16
 
 
 	remove_directory(d.working_directory)

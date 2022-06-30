@@ -4,7 +4,7 @@ plots_directory = "plots"
 processed_directory = "processed"
 
 # PREPROCESSING VARIABLES
-img_size = 32
+img_size = 256
 
 
 # for OPENCV HOG

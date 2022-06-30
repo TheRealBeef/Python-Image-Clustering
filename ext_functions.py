@@ -21,9 +21,7 @@ def process_images(payload):
 
 	pool = ThreadPool(1)
 
-
 	print("[Process %s] started and working on on %s files" % (format(payload["id"]), len(payload["input_paths"])))
-	image_size = d.img_size
 	processed = []
 	for imagePath in payload["input_paths"]:
 		img_name = int(imagePath.split('/')[1][4:8])
@@ -33,11 +31,12 @@ def process_images(payload):
 		coords = cv2.findNonZero(gray)  # Find all non-zero points (text)
 		x, y, w, h = cv2.boundingRect(coords)  # Find minimum spanning bounding box
 		rect = image[y:y + h, x:x + w]  # Crop the image - note we do this on the original image
-		resized = cv2.resize(rect, (image_size, image_size))
+		resized = cv2.resize(rect, (d.img_size, d.img_size))
 
 		data = ()
 		data = skimage.feature.hog(resized, orientations=9, pixels_per_cell=(8, 8),	cells_per_block=(3, 3), feature_vector=True,
 								   visualize=payload["save_images"], channel_axis=2)
+
 		final=(img_name, data)
 		processed.append(final)
 
@@ -91,35 +90,28 @@ def pre_processing(input_directory, working_directory, output_file, num_processe
 	i = 0
 
 	# loop over all pickle files in the output directory
-	for p in paths.list_files(working_directory, validExts=".pkl", ):
+	for p in paths.list_files(working_directory, validExts=".pkl"):
 		print("Loading data from %s" % p)
 		stuff = pickle.loads(open(p, "rb").read())  # load the contents of the dictionary
 		names, images_output = zip(*stuff)
 		if save: print("Writing processed images to /%s/ (%s.png thru %s.png) and histograms to /%s/ (%s.png thru %s.png)"
 			  % (d.processed_directory, i, i + len(images_output), d.plots_directory, i, i + len(images_output)))
-		# loop over the hashes and image paths in the dictionary
+		j = 0
 		for (image) in tqdm(images_output, leave=False):
-			# grab all image paths with the current hash, add in the
-			# image paths for the current pickle file, and then
-			# update our hashes dictionary
-			if save:
-				# spacing = 25
-				# if i%spacing == 0:
-				# print("Writing processed images to /%s/ (%s.png thru %s.png) and histograms to /%s/ (%s.png thru %s.png)"
-				# % (d.processed_directory, i, i+spacing, d.plots_directory, i, i+spacing))
 
+			if save:
 				histogram, plot = image
 				plt.imsave(("%s/%s.png" % (d.processed_directory, i)), plot)
-
 
 				plt.plot(histogram)
 				plt.savefig("%s/%s.png" % (d.plots_directory, i))
 				plt.clf()
 			else:
 				histogram = image
-
-			results = (names, histogram)
+			name = names[j]
+			results = (name, histogram)
 			images.append(results)
+			j +=1
 			i = i+1
 
 	# serialize the hash dictionary to disk
@@ -129,13 +121,60 @@ def pre_processing(input_directory, working_directory, output_file, num_processe
 	f.close()
 
 
-def cluster_data(data):
-	names, infos = zip(*data)
+def print_graph_2d(image_data):
 	pca = PCA(n_components=2)
-	pca_infos = pca.fit_transform(infos)
+	pca_infos = pca.fit_transform(image_data)
 	stuff = KMeans(n_clusters=10, init='k-means++', random_state=0).fit(pca_infos)
+	x = []
+	y = []
+	labels = stuff.labels_
+	centers = stuff.cluster_centers_
+	variabes = stuff.inertia_
 	plt.clf()
 	for i in pca_infos:
-		#plt.plot(i)
-		sns.scatterplot(data=i[0:1])
+		x.append(i[0])
+		y.append(i[1])
+	plt.scatter(x, y, c=labels)
 	plt.savefig("test.png")
+
+
+def print_graph_elbow(image_data):
+	pca = PCA(n_components=500)
+	pca_infos = pca.fit_transform(image_data)
+	elbow_data = []
+	for i in tqdm(range(1, 20)):
+		elbow_data.append(KMeans(n_clusters=i, init='k-means++', random_state=0).fit(pca_infos))
+
+	x = []
+	y = []
+	for i in elbow_data:
+		x.append(i.n_clusters)
+		y.append(i.inertia_)
+
+	plt.plot(x, y)
+	plt.savefig("plot2.png")
+
+
+def compare_labels_kmeans(image_data, names):
+	pca = PCA(n_components=500)
+	pca_infos = pca.fit_transform(image_data)
+	stuff = KMeans(n_clusters=10, init='k-means++', random_state=0).fit(pca_infos)
+
+	group = []
+
+
+
+	# assign each image# to a group - 0-99 group 1, 100-199 group 2, etc.
+	for i in names:
+		group.append(int(i/100))
+
+	print(sklearn.metrics.adjusted_rand_score(group, stuff.labels_))
+
+
+def cluster_data(data):
+	#data un-shitpacking
+	names, image_data = zip(*data)
+
+	#print_graph_2d(image_data)
+	#print_graph_elbow(image_data)
+	compare_labels_kmeans(image_data, names)
