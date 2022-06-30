@@ -14,6 +14,8 @@
     scipy	       	1.8.1
     threadpoolctl	3.1.0
     tqdm	        4.64.0
+    seaborn		0.11.2
+    imutils 		0.5.4
 
 ## Error resolution
 If an error is thrown for
