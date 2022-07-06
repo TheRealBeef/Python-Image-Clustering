@@ -13,7 +13,7 @@ def remove_directory(directory_name):
 		os.rmdir(directory_name)
 		print("Folder /%s/  Removed" % directory_name)
 	except:
-		print("Working folder doesn't exist!!??!!")
+		print("Temp Folder already removed")
 
 if __name__ == "__main__":
 
@@ -21,9 +21,9 @@ if __name__ == "__main__":
 
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-i", "--images", required=False, type=str, help="name of image directory")
-	ap.add_argument("-a", "--output", required=False, type=str, help="name of output pkl")
+	ap.add_argument("-o", "--output", required=False, type=str, help="name of output pkl")
 	ap.add_argument("-p", "--procs", required=False, type=int, help="# of processes to use")
-	ap.add_argument("-s", "--save", required=False, type=bool, help="save HOG images to processed directory")
+	ap.add_argument("-s", "--save", required=False, type=bool, help="True/False save HOG images to processed directory")
 	args = vars(ap.parse_args())
 
 	if not args["images"]: args["images"] = "Cluster_img"
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
 	remove_directory(d.working_directory)
 	try: os.mkdir(d.working_directory)
-	except: print("Working directory exists...")
+	except: print("Temp directory exists...")
 	if args["save"]:
 		remove_directory(d.plots_directory)
 		try: os.mkdir(d.plots_directory)
@@ -43,17 +43,13 @@ if __name__ == "__main__":
 		try: os.mkdir(d.processed_directory)
 		except: print("Processed images directory exists...")
 
-	# Step 2: Load Image and Perform Pre-Processing (Color, Scale, resize, etc)
+	# Step 2: Load Image and Perform Pre-Processing (Color, Scale, resize, etc) and extract Features from Images
 	ext.pre_processing(args["images"], d.working_directory, args["output"], args["procs"], args["save"])
 
-	# Step 3: Extract Features from Images (PCA, HOG, etc)
-	# currently in pre_processing
-
-	# Step 4: Cluster Images
+	# Step 3: Cluster Images
 	data = ()
 	data = pickle.loads(open(args["output"], "rb").read())
 	ext.cluster_data(data)
 	# Step 5: Label and graph the clusters
 
-	remove_directory(d.working_directory)
 	print("Completed Successfully")

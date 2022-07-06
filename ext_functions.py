@@ -10,8 +10,6 @@ import numpy as np
 import pickle
 import os
 import skimage.feature
-from sklearn.preprocessing import StandardScaler
-import seaborn as sns
 import defines as d
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -34,7 +32,7 @@ def process_images(payload):
 		resized = cv2.resize(rect, (d.img_size, d.img_size))
 
 		data = ()
-		data = skimage.feature.hog(resized, orientations=9, pixels_per_cell=(8, 8),	cells_per_block=(3, 3), feature_vector=True,
+		data = skimage.feature.hog(resized, orientations=9, pixels_per_cell=(d.block_size, d.block_size),	cells_per_block=(d.cells_per_block, d.cells_per_block), feature_vector=True,
 								   visualize=payload["save_images"], channel_axis=2)
 
 		final=(img_name, data)
@@ -48,9 +46,7 @@ def process_images(payload):
 
 
 def chunk(l, n):
-	# loop over the list in n-sized chunks
 	for i in range(0, len(l), n):
-		# yield the current n-sized chunk to the calling function
 		yield l[i: i + n]
 
 
@@ -114,7 +110,6 @@ def pre_processing(input_directory, working_directory, output_file, num_processe
 			j +=1
 			i = i+1
 
-	# serialize the hash dictionary to disk
 	print("Writing final output to %s" % output_file)
 	f = open(output_file, "wb")
 	f.write(pickle.dumps(images))
@@ -127,22 +122,28 @@ def print_graph_2d(image_data):
 	stuff = KMeans(n_clusters=10, init='k-means++', random_state=0).fit(pca_infos)
 	x = []
 	y = []
+	xc = []
+	yc = []
 	labels = stuff.labels_
 	centers = stuff.cluster_centers_
-	variabes = stuff.inertia_
 	plt.clf()
+	for i in centers:
+		xc.append(i[0])
+		yc.append(i[1])
 	for i in pca_infos:
 		x.append(i[0])
 		y.append(i[1])
 	plt.scatter(x, y, c=labels)
-	plt.savefig("test.png")
+	plt.scatter(xc, yc, color='black')
+	plt.savefig("2d_Representation_Plot.png")
 
 
 def print_graph_elbow(image_data):
-	pca = PCA(n_components=500)
+	print("Generating Elbow Graph")
+	pca = PCA(n_components=20)
 	pca_infos = pca.fit_transform(image_data)
 	elbow_data = []
-	for i in tqdm(range(1, 20)):
+	for i in tqdm(range(1, 50)):
 		elbow_data.append(KMeans(n_clusters=i, init='k-means++', random_state=0).fit(pca_infos))
 
 	x = []
@@ -152,29 +153,27 @@ def print_graph_elbow(image_data):
 		y.append(i.inertia_)
 
 	plt.plot(x, y)
-	plt.savefig("plot2.png")
+	plt.savefig("Elbow_Graph.png")
 
 
 def compare_labels_kmeans(image_data, names):
-	pca = PCA(n_components=500)
+	pca = PCA(n_components=20)
 	pca_infos = pca.fit_transform(image_data)
 	stuff = KMeans(n_clusters=10, init='k-means++', random_state=0).fit(pca_infos)
 
 	group = []
-
-
-
 	# assign each image# to a group - 0-99 group 1, 100-199 group 2, etc.
 	for i in names:
 		group.append(int(i/100))
 
-	print(sklearn.metrics.adjusted_rand_score(group, stuff.labels_))
+	output = int(sklearn.metrics.adjusted_rand_score(group, stuff.labels_)*100)
+	print("Accuracy Achieved: %s%%" % (output))
 
 
 def cluster_data(data):
 	#data un-shitpacking
 	names, image_data = zip(*data)
 
-	#print_graph_2d(image_data)
-	#print_graph_elbow(image_data)
+	print_graph_2d(image_data)
+	print_graph_elbow(image_data)
 	compare_labels_kmeans(image_data, names)
